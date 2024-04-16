@@ -1,0 +1,33 @@
+services:
+    poetry:
+        image: poetry-base
+        build:
+            context: .
+            dockerfile: poetry.Dockerfile
+    web:
+        image: nvd-web
+        depends_on:
+            - poetry
+        build:
+            context: .
+            dockerfile: nvd.Dockerfile
+            target: deployment
+        command:
+            - flask
+            - --app
+            - app/app
+            - run
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+        environment:
+            PYTHONPATH: .
+            FLASK_ENV: production
+        ports:
+            - "8000:8000"
+        volumes:
+            - ./app:/NVD_DB/app
+            - ./nvd_db:/NVD_DB/nvd_db
+            - ./env.toml:/NVD_DB/env.toml
+        restart: always

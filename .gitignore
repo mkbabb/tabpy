@@ -1,0 +1,8 @@
+.idea
+*.db
+.venv
+env.toml
+.vscode/
+__pycache__/
+*.pyc
+*.pyo

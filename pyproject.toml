@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "mtabpy"
+version = "0.1.0"
+description = ""
+authors = ["Michael Babb <mike7400@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+tabpy = "^2.9.0"
+numpy = "^1.26.4"
+pandas = "^2.2.1"
+networkx = "^3.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
