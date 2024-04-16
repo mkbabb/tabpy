@@ -11,10 +11,7 @@ services:
         build:
             context: .
             dockerfile: tabpy.Dockerfile
-            target: deployment
         command:
-            - poetry
-            - run
             - tabpy
             - --disable-auth-warning
             - --config

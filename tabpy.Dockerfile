@@ -1,13 +1,13 @@
-FROM poetry-base as deployment
+FROM poetry-base
 
-# copy the poetry file and install dependencies
 WORKDIR $PYSETUP_PATH
 
 COPY poetry.lock pyproject.toml .
 
-RUN poetry install --no-dev
+WORKDIR /tabpy
 
-# copy the config files
-COPY tabpy.conf /
+COPY tabpy.conf .
+
+RUN poetry install --no-dev
 
 EXPOSE 9004
