@@ -36,10 +36,5 @@ RUN apt-get update \
 # install poetry - respects $POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# copy the poetry file and install dependencies
-WORKDIR $PYSETUP_PATH
 
-COPY poetry.lock pyproject.toml ./
-
-RUN poetry install
 

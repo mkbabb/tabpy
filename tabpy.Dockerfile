@@ -1,10 +1,13 @@
 FROM poetry-base as deployment
 
-# echo the poetry dependencies to a requirements.txt file
-RUN poetry export -f requirements.txt --output /cache/requirements.txt
+# copy the poetry file and install dependencies
+WORKDIR $PYSETUP_PATH
 
-RUN cat /cache/requirements.txt 
+COPY poetry.lock pyproject.toml .
 
-COPY config.conf /
+RUN poetry install --no-dev
+
+# copy the config files
+COPY tabpy.conf /
 
 EXPOSE 9004

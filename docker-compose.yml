@@ -12,9 +12,13 @@ services:
             context: .
             dockerfile: tabpy.Dockerfile
             target: deployment
-        # command:
-        #     - tabpy
-        #     - --disable-auth-warning
+        command:
+            - poetry
+            - run
+            - tabpy
+            - --disable-auth-warning
+            - --config
+            - ./tabpy.conf
         environment:
             PYTHONPATH: .
         ports:
