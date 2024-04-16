@@ -6,3 +6,5 @@ env.toml
 __pycache__/
 *.pyc
 *.pyo
+auth/
+data/

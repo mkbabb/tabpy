@@ -4,30 +4,22 @@ services:
         build:
             context: .
             dockerfile: poetry.Dockerfile
-    web:
-        image: nvd-web
+    tabpy:
+        image: tabpy
         depends_on:
             - poetry
         build:
             context: .
-            dockerfile: nvd.Dockerfile
+            dockerfile: tabpy.Dockerfile
             target: deployment
-        command:
-            - flask
-            - --app
-            - app/app
-            - run
-            - --host
-            - "0.0.0.0"
-            - --port
-            - "8000"
+        # command:
+        #     - tabpy
+        #     - --disable-auth-warning
         environment:
             PYTHONPATH: .
-            FLASK_ENV: production
         ports:
-            - "8000:8000"
+            - "8001:9004"
         volumes:
-            - ./app:/NVD_DB/app
-            - ./nvd_db:/NVD_DB/nvd_db
-            - ./env.toml:/NVD_DB/env.toml
+            - ./log:/log
+            - ./data/cache:/cache
         restart: always
