@@ -11,6 +11,9 @@ tabpy = "^2.9.0"
 numpy = "^1.26.4"
 pandas = "^2.2.1"
 networkx = "^3.3"
+cachew = "^0.16.20240129"
+colorlog = "^6.8.2"
+matplotlib = "^3.8.4"
 
 
 [tool.poetry.group.dev.dependencies]
