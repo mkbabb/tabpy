@@ -1,115 +1,150 @@
 import functools
 import hashlib
 import json
+import pickle
 from pathlib import Path
 from typing import Any, Callable, Literal
 
 import networkx as nx  # type: ignore
 
-CACHE_DIR = Path("./cache")
+CACHE_DIR = Path('cache/')
+
+CACHE_DIR.mkdir(exist_ok=True)
 
 Layouts = Literal[
-    "spring", "circular", "random", "shell", "kamada_kawai", "spectral", "spiral"
+    'spring', 'circular', 'random', 'shell', 'kamada_kawai', 'spectral', 'spiral'
 ]
-
 
 SEED = 42
 
 
-def cache_json(func: Callable[..., Any]) -> Callable[..., Any]:
+def cache_pickle(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # Hash the input arguments
-        input_data = {"args": args, "kwargs": kwargs}
 
-        input_hash = hashlib.md5(json.dumps(input_data).encode()).hexdigest()
+        input_data = {'args': args, 'kwargs': kwargs}
 
-        output_path = CACHE_DIR / f"{input_hash}_output.json"
+        # Create a hash of the input data using pickle for serialization
+        input_hash = hashlib.md5(pickle.dumps(input_data)).hexdigest()
 
-        # Check if the output file exists
+        output_path = CACHE_DIR / f'{input_hash}_output.pkl'
+
+        # Check if the result is already cached and return it if so
         if output_path.exists():
-            # Load the cached output from the file
-            with output_path.open("r") as f:
-                return json.load(f)
+            with output_path.open('rb') as f:
+                return pickle.load(f)
 
-        # Call the original function
+        # Compute the function's result if not cached
         output_data = func(*args, **kwargs)
 
-        # Save the output input_data to the output file
-        with output_path.open("w") as f:
-            json.dump(output_data, f, indent=4)
+        # Cache the result using pickle
+        with output_path.open('wb') as f:
+            pickle.dump(output_data, f)
 
         return output_data
 
     return wrapper
 
 
-# @cache_json
+@cache_pickle
+def compute_layout(
+    from_nodes: list[str],
+    to_nodes: list[str],
+    bases: list[str],
+    layout: str,
+    k: float = 0.5,
+):
+    t_edges = list(zip(from_nodes, to_nodes, bases))
+
+    # edges_path = CACHE_DIR / 'input.json'
+
+    # with edges_path.open('w') as f:
+    #     json.dump(t_edges, f, indent=4)
+
+    edges = [
+        (from_node, to_node)
+        for from_node, to_node, base in t_edges
+        if base == 'original'
+    ]
+
+    # Protect against empty or invalid input
+    if not len(edges) or edges[0] is None or edges[0] is None:
+        return [None] * len(to_nodes)
+
+    edges = [(f, t) for f, t, b in zip(from_nodes, to_nodes, bases) if b == 'original']
+
+    G = nx.Graph()
+    G.add_edges_from(edges)
+
+    def get_mapping():
+        if layout == 'spring':
+            return nx.spring_layout(G, k=k, seed=SEED)
+        elif layout == 'circular':
+            return nx.circular_layout(G)
+        elif layout == 'random':
+            return nx.random_layout(G, seed=SEED)
+        elif layout == 'shell':
+            return nx.shell_layout(G)
+        elif layout == 'kamada_kawai':
+            return nx.kamada_kawai_layout(G)
+        elif layout == 'spectral':
+            return nx.spectral_layout(G)
+        elif layout == 'spiral':
+            return nx.spiral_layout(G)
+
+    positions = get_mapping()
+
+    if positions is None:
+        return [None] * len(to_nodes)
+
+    coords = []
+
+    for from_node, to_node, base in t_edges:
+        coord = {
+            # 'edge': (from_node, to_node),
+            'x': 0.0,
+            'y': 0.0,
+            'weight': 0.0,
+            # 'base': base,
+        }
+
+        if from_node not in positions or to_node not in positions:
+            coords.append(coord)
+            continue
+
+        if base == 'mirrored' and dimension != 'weight':
+            from_node, to_node = to_node, from_node
+
+        coord |= {
+            'x': positions[to_node][0],
+            'y': positions[to_node][1],
+            'weight': G.degree(to_node),
+        }
+
+        coords.append(coord)
+
+    return coords
+
+
 def main(
     from_nodes: list[str],
     to_nodes: list[str],
     bases: list[str],
     dimension: str,
     k: float = 0.5,
-    layout: str = "spring",
+    layout: str = 'spring',
 ) -> list[float | None]:
-    dimension = str(dimension).lower()
-    dim_ix = 0 if dimension == "x" else 1
 
-    t_edges = list(zip(from_nodes, to_nodes, bases))
+    positions = compute_layout(
+        from_nodes=from_nodes, to_nodes=to_nodes, bases=bases, layout=layout, k=k
+    )
 
-    edges_path = CACHE_DIR / "input.json"
-    edges_path.write_text(json.dumps(t_edges, indent=4))
+    dimension = dimension.lower()
 
-    edges = [
-        (from_node, to_node)
-        for from_node, to_node, base in t_edges
-        if base == "original"
-    ]
+    return [coord[dimension] for coord in positions]
 
-    # Protect against empty or invalid input
-    if not edges or edges[0][0] is None or edges[0][1] is None:
-        return [None] * len(to_nodes)
 
-    G = nx.Graph()
-    G.add_edges_from(edges)
-
-    positions = None
-    if layout == "spring":
-        positions = nx.spring_layout(G, k=k, seed=SEED)
-    elif layout == "circular":
-        positions = nx.circular_layout(G)
-    elif layout == "random":
-        positions = nx.random_layout(G, seed=SEED)
-    elif layout == "shell":
-        positions = nx.shell_layout(G)
-    elif layout == "kamada_kawai":
-        positions = nx.kamada_kawai_layout(G)
-    elif layout == "spectral":
-        positions = nx.spectral_layout(G)
-    elif layout == "spiral":
-        positions = nx.spiral_layout(G)
-    else:
-        return [None] * len(from_nodes)
-
-    coords: list[float | None] = []
-
-    for from_node, to_node, base in t_edges:
-        if from_node not in positions or to_node not in positions:
-            coords.append(0.0)
-            continue
-
-        if base == "mirrored":
-            from_node, to_node = to_node, from_node
-
-        if dimension == "weight":
-            coords.append(G.degree(from_node))
-        else:
-            pos = positions[from_node]
-            coords.append(pos[dim_ix])
-
-    return coords
-
+# Example usage would be similar, but now the main function utilizes the separate compute_layout function to get the layout and then extracts dimension-specific data.
 
 from_nodes = _arg1
 to_nodes = _arg2
@@ -144,4 +179,4 @@ result = main(
     layout=layout,
 )
 
-return result
+# return result
