@@ -21,6 +21,6 @@ services:
         ports:
             - "8001:9004"
         volumes:
-            - ./log:/log
-            - ./data/cache:/cache
+            - ./log:/tabpy/log
+            - ./data/cache:/tabpy/cache
         restart: always

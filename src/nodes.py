@@ -1,65 +1,182 @@
-import networkx as nx
+import functools
+import hashlib
 import json
+import pickle
 from pathlib import Path
+from typing import Any, Callable, Literal
 
-CACHE_DIR = Path('./cache')
+import networkx as nx  # type: ignore
+
+CACHE_DIR = Path('cache/')
 
 CACHE_DIR.mkdir(exist_ok=True)
 
+Layouts = Literal[
+    'spring', 'circular', 'random', 'shell', 'kamada_kawai', 'spectral', 'spiral'
+]
 
-get_cache_file = lambda cache_key: CACHE_DIR / f'cache_{cache_key}.json'
-
-def generate_cache_key(edges: list[float], dimension: str):
-    key = ''.join(sorted([str(edge) for edge in edges])) + '_' + str(dimension)
-    
-    return hash(key)
+SEED = 42
 
 
-def read_from_cache(cache_key: str):
-    cache_file = get_cache_file(cache_key)
+def cache_pickle(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
 
-    if cache_file.exists():
-        return json.loads(cache_file.read_text())
-    
-    return None
+        input_data = {'args': args, 'kwargs': kwargs}
+
+        # Create a hash of the input data using pickle for serialization
+        input_hash = hashlib.md5(pickle.dumps(input_data)).hexdigest()
+
+        output_path = CACHE_DIR / f'{input_hash}_output.pkl'
+
+        # Check if the result is already cached and return it if so
+        if output_path.exists():
+            with output_path.open('rb') as f:
+                return pickle.load(f)
+
+        # Compute the function's result if not cached
+        output_data = func(*args, **kwargs)
+
+        # Cache the result using pickle
+        with output_path.open('wb') as f:
+            pickle.dump(output_data, f)
+
+        return output_data
+
+    return wrapper
 
 
-def write_to_cache(cache_key: str, data: list[float]):
-    cache_file = get_cache_file(cache_key)
+@cache_pickle
+def compute_layout(
+    from_nodes: list[str],
+    to_nodes: list[str],
+    bases: list[str],
+    layout: str,
+    k: float = 0.5,
+):
+    t_edges = list(zip(from_nodes, to_nodes, bases))
 
-    cache_file.write_text(json.dumps(data, indent=4))
+    # edges_path = CACHE_DIR / 'input.json'
 
-# Receiving 'from' and 'to' node lists and coordinate type from Tableau
+    # with edges_path.open('w') as f:
+    #     json.dump(t_edges, f, indent=4)
+
+    edges = [
+        (from_node, to_node)
+        for from_node, to_node, base in t_edges
+        if base == 'original'
+    ]
+
+    # Protect against empty or invalid input
+    if not len(edges) or edges[0] is None or edges[0] is None:
+        return [None] * len(to_nodes)
+
+    edges = [(f, t) for f, t, b in zip(from_nodes, to_nodes, bases) if b == 'original']
+
+    G = nx.Graph()
+    G.add_edges_from(edges)
+
+    def get_mapping():
+        if layout == 'spring':
+            return nx.spring_layout(G, k=k, seed=SEED)
+        elif layout == 'circular':
+            return nx.circular_layout(G)
+        elif layout == 'random':
+            return nx.random_layout(G, seed=SEED)
+        elif layout == 'shell':
+            return nx.shell_layout(G)
+        elif layout == 'kamada_kawai':
+            return nx.kamada_kawai_layout(G)
+        elif layout == 'spectral':
+            return nx.spectral_layout(G)
+        elif layout == 'spiral':
+            return nx.spiral_layout(G)
+
+    positions = get_mapping()
+
+    if positions is None:
+        return [None] * len(to_nodes)
+
+    coords = []
+
+    for from_node, to_node, base in t_edges:
+        coord = {
+            # 'edge': (from_node, to_node),
+            'x': 0.0,
+            'y': 0.0,
+            'weight': 0.0,
+            # 'base': base,
+        }
+
+        if from_node not in positions or to_node not in positions:
+            coords.append(coord)
+            continue
+
+        if base == 'mirrored' and dimension != 'weight':
+            from_node, to_node = to_node, from_node
+
+        coord |= {
+            'x': positions[to_node][0],
+            'y': positions[to_node][1],
+            'weight': G.degree(to_node),
+        }
+
+        coords.append(coord)
+
+    return coords
+
+
+def main(
+    from_nodes: list[str],
+    to_nodes: list[str],
+    bases: list[str],
+    dimension: str,
+    k: float = 0.5,
+    layout: str = 'spring',
+) -> list[float | None]:
+
+    positions = compute_layout(
+        from_nodes=from_nodes, to_nodes=to_nodes, bases=bases, layout=layout, k=k
+    )
+
+    dimension = dimension.lower()
+
+    return [coord[dimension] for coord in positions]
+
+
+# Example usage would be similar, but now the main function utilizes the separate compute_layout function to get the layout and then extracts dimension-specific data.
+
 from_nodes = _arg1
 to_nodes = _arg2
+bases = _arg3
+dimension = _arg4
+layout = _arg5
+k = _arg6
 
-dimension = str(_arg3).lower()
-dim_ix = 0 if dimension == 'x' else 1
 
-edges = list(zip(from_nodes, to_nodes))
+# edges = json.loads(open('./data/input.json').read())
+# from_nodes, to_nodes, bases = zip(*edges)
+# dimension = 'Y'
+# layout = 'spring'
+# k = 0.5
 
-input_path = CACHE_DIR / 'input.json'
-input_path.write_text(json.dumps(edges, indent=4))
+if isinstance(dimension, list):
+    dimension = dimension[0]
 
-# Protect against empty or invalid input
-if not edges or edges[0][0] is None or edges[0][1] is None:
-    return [None] * len(from_nodes)
+if isinstance(layout, list):
+    layout = layout[0]
 
-# Generate a cache key and attempt to read from cache
-cache_key = generate_cache_key(edges=edges, dimension=dimension)
-cached_result = read_from_cache(cache_key=cache_key)
+if isinstance(k, list):
+    k = k[0]
 
-if cached_result is not None:
-    return cached_result
 
-G = nx.Graph()
-G.add_edges_from(edges)
+result = main(
+    from_nodes=from_nodes,
+    to_nodes=to_nodes,
+    bases=bases,
+    dimension=dimension,
+    k=k,
+    layout=layout,
+)
 
-positions = nx.spring_layout(G, iterations=2)  # Calculate node positions
-
-# Map 'from' nodes to their coordinates
-coords = [positions[node][dim_ix] if node in positions else None for node in from_nodes]
-
-write_to_cache(cache_key=cache_key, data=coords)
-
-return coords
+# return result
