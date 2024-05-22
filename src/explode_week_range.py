@@ -29,8 +29,9 @@ def explode_week_range(df: pd.DataFrame) -> pd.DataFrame:
 
     # Apply the explosion to each row
     exploded_rows = []
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
         weeks = explode_row(row['Week #'])
+
         for week in weeks:
             new_row = row.copy()
             new_row['Week #'] = week
@@ -38,15 +39,17 @@ def explode_week_range(df: pd.DataFrame) -> pd.DataFrame:
 
     exploded_df = pd.DataFrame(exploded_rows)
 
+    exploded_df['Week #'] = exploded_df['Week #'].astype(str)
+
     return exploded_df
 
 
-path = pathlib.Path(
-    "/Users/mkbabb/Library/CloudStorage/GoogleDrive-mbabb@ncsu.edu/Shared drives/FI-LEADS-CVM/Curriculum Map/data/curriculum-tmp.csv"
-)
-df = pd.read_csv(path)
+# path = pathlib.Path(
+#     "/Users/mkbabb/Library/CloudStorage/GoogleDrive-mbabb@ncsu.edu/Shared drives/FI-LEADS-CVM/Curriculum Map/data/curriculum-tmp.csv"
+# )
+# df = pd.read_csv(path)
 
-exploded_df = explode_week_range(df)
-exploded_path = path.parent / 'curriculum-exploded.csv'
+# exploded_df = explode_week_range(df)
+# exploded_path = path.parent / 'curriculum-exploded.csv'
 
-exploded_df.to_csv(exploded_path, index=False)
+# exploded_df.to_csv(exploded_path, index=False)
