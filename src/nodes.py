@@ -46,7 +46,7 @@ def cache_pickle(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-@cache_pickle
+# @cache_pickle
 def compute_layout(
     from_nodes: list[str],
     to_nodes: list[str],
@@ -98,14 +98,13 @@ def compute_layout(
         return [None] * len(to_nodes)
 
     coords = []
+    coords_set = set()
 
     for from_node, to_node, base in t_edges:
         coord = {
-            # 'edge': (from_node, to_node),
             'x': 0.0,
             'y': 0.0,
             'weight': 0.0,
-            # 'base': base,
         }
 
         if from_node not in positions or to_node not in positions:
@@ -115,13 +114,21 @@ def compute_layout(
         if base == 'mirrored' and dimension != 'weight':
             from_node, to_node = to_node, from_node
 
+        x = positions[from_node][0]
+        y = positions[from_node][1]
+        weight = G.degree(from_node)
+
+        if base != 'mirrored':
+            weight = 0.0
+
         coord |= {
-            'x': positions[to_node][0],
-            'y': positions[to_node][1],
-            'weight': G.degree(to_node),
+            'x': x,
+            'y': y,
+            'weight': weight,
         }
 
         coords.append(coord)
+        coords_set.add((x, y))
 
     return coords
 
@@ -179,4 +186,4 @@ result = main(
     layout=layout,
 )
 
-# return result
+return result
