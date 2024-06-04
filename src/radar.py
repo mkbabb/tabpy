@@ -1,8 +1,48 @@
+import functools
+import hashlib
+import pickle
+from pathlib import Path
+from typing import Any, Callable, Literal
+
+import networkx as nx  # type: ignore
 import numpy as np
 import pandas as pd
 
+CACHE_DIR = Path('cache/')
 
-def calculate_radar_coordinates(
+CACHE_DIR.mkdir(exist_ok=True)
+
+
+def cache_pickle(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+
+        input_data = {'args': args, 'kwargs': kwargs}
+
+        # Create a hash of the input data using pickle for serialization
+        input_hash = hashlib.md5(pickle.dumps(input_data)).hexdigest()
+
+        output_path = CACHE_DIR / f'{input_hash}_output.pkl'
+
+        # Check if the result is already cached and return it if so
+        if output_path.exists():
+            with output_path.open('rb') as f:
+                return pickle.load(f)
+
+        # Compute the function's result if not cached
+        output_data = func(*args, **kwargs)
+
+        # Cache the result using pickle
+        with output_path.open('wb') as f:
+            pickle.dump(output_data, f)
+
+        return output_data
+
+    return wrapper
+
+
+@cache_pickle
+def calculate_radar_coords(
     data: list[str],
     calc_amplitude_data: list[str],
     threads: list[str],
@@ -43,8 +83,12 @@ def calculate_radar_coordinates(
     noise = np.random.normal(0, 0.1, size=num_values)
     grouped['Noise'] = noise
 
-    grouped['x'] = grouped['NormalizedAmplitude'] * np.cos(grouped['Angle']) + grouped['Noise']
-    grouped['y'] = grouped['NormalizedAmplitude'] * np.sin(grouped['Angle']) + grouped['Noise']
+    grouped['x'] = (
+        grouped['NormalizedAmplitude'] * np.cos(grouped['Angle']) + grouped['Noise']
+    )
+    grouped['y'] = (
+        grouped['NormalizedAmplitude'] * np.sin(grouped['Angle']) + grouped['Noise']
+    )
 
     # Join the original data with the calculated coordinates
     result = df.merge(
@@ -78,7 +122,7 @@ dimension = _arg5
 if isinstance(dimension, list):
     dimension = str(dimension[0])
 
-return calculate_radar_coordinates(
+return calculate_radar_coords(
     data=data,
     calc_amplitude_data=calc_amplitude_data,
     threads=threads,
