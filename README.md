@@ -84,14 +84,14 @@ TODO
 
 Several scripts are available to test out the TabPy server:
 
-### [`./src/nodes.py`](nodes.py)
+### [`nodes.py`](./src/nodes.py)
 
 Implementation of a live, and fairly performant, graph visualization using the `networkx` library. The script generates the `x`, `y`, and `weight` attributes for each node and edge in the graph.
 
-### [`./src/explode_week_range`](explode_week_range.py)
+### [`explode_week_range.py`](./src/explode_week_rangey)
 
 This script, meant for Tableau Prep, takes the `Week #` column and explodes it into a range of weeks. For example, one row with `1-3` will be exploded into three rows: `1`, `2`, and `3` & c.
 
-### [`./src/radar.py`](radar.py)
+### [`radar.py`](./src/radar.py)
 
 Poor-mans implementation of a radar chart using edge bundling. The script generates the `x`, `y`, and `weight` attributes for each node and edge in the graph.
