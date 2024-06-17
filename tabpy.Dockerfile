@@ -9,5 +9,6 @@ RUN poetry install --no-dev
 WORKDIR /tabpy
 
 COPY tabpy.conf .
+COPY ./data/passwords.txt .
 
 EXPOSE 9004
