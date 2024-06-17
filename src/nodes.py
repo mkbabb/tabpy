@@ -3,7 +3,9 @@ import hashlib
 import json
 import pickle
 from pathlib import Path
+import random
 from typing import Any, Callable, Literal
+from collections import defaultdict
 
 import networkx as nx  # type: ignore
 
@@ -97,33 +99,36 @@ def compute_layout(
     if positions is None:
         return [None] * len(to_nodes)
 
-    coords = []
+    items = []
 
     for from_node, to_node, base in t_edges:
-        coord = {
-            # 'edge': (from_node, to_node),
+        item = {
             'x': 0.0,
             'y': 0.0,
             'weight': 0.0,
-            # 'base': base,
         }
 
         if from_node not in positions or to_node not in positions:
-            coords.append(coord)
+            items.append(item)
             continue
 
-        if base == 'mirrored' and dimension != 'weight':
+        if base == 'mirrored':
             from_node, to_node = to_node, from_node
 
-        coord |= {
-            'x': positions[to_node][0],
-            'y': positions[to_node][1],
-            'weight': G.degree(to_node),
+        x = positions[from_node][0]
+        y = positions[from_node][1]
+
+        weight = G.degree(from_node)
+
+        item |= {
+            'x': x,
+            'y': y,
+            'weight': weight,
         }
 
-        coords.append(coord)
+        items.append(item)
 
-    return coords
+    return items
 
 
 def main(
@@ -179,4 +184,4 @@ result = main(
     layout=layout,
 )
 
-# return result
+return result
