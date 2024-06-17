@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 tabpy = "^2.9.0"
-numpy = "^1.26.4"
+numpy = "^2.0.0"
 pandas = "^2.2.2"
 networkx = "^3.3"
 cachew = "^0.16.20240129"
@@ -17,7 +17,7 @@ matplotlib = "^3.9.0"
 
 
 [tool.poetry.group.dev.dependencies]
-pandas-stubs = "^2.2.2.240514"
+pandas-stubs = "^2.2.2.240603"
 
 [build-system]
 requires = ["poetry-core"]
